@@ -2,11 +2,13 @@ package com.example.salary_bonus_calculatordemo.controller;
 
 import com.example.salary_bonus_calculatordemo.Service.BranchService;
 import com.example.salary_bonus_calculatordemo.Service.EmployeeService;
+import com.example.salary_bonus_calculatordemo.model.Branch;
 import com.example.salary_bonus_calculatordemo.model.Employee;
 import com.example.salary_bonus_calculatordemo.model.Salary;
 import com.example.salary_bonus_calculatordemo.repository.EmployeeRepository;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -17,7 +19,10 @@ import javafx.scene.layout.HBox;
 
 import java.awt.Label;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CalculateController {
 
@@ -69,28 +74,52 @@ public class CalculateController {
         calculateButton.setOnAction(event -> calculateBonus());
     }
 
-    private void populateBranchComboBox() {
-        List<Employee> employees = employeeRepo.getAllEmployees();
+    private ObservableList<String> branchNames;
+    private Map<String, Integer> branchMap = new HashMap<>();
 
-        ObservableList<String> branchNames = FXCollections.observableArrayList();
-        for (Employee employee : employees) {
-            String branchName = "Branch " + employee.getBranchId();
-            if (!branchNames.contains(branchName)) {
-                branchNames.add(branchName);
-            }
+    private void populateBranchComboBox() {
+        List<Branch> branches = branchService.getAllBranches();
+        branchNames = FXCollections.observableArrayList();
+
+        for (Branch branch : branches) {
+            branchNames.add(branch.getBranchName());
+            branchMap.put(branch.getBranchName(), branch.getId()); // Store ID in map
         }
-        branchComboBox.setItems(branchNames);
+
+        FilteredList<String> filteredBranches = new FilteredList<>(branchNames, s -> true);
+        branchComboBox.setItems(filteredBranches);
+
+        branchComboBox.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            filteredBranches.setPredicate(branchName -> {
+                if (newValue == null || newValue.isEmpty()) {
+                    return true;
+                }
+                String lowerCaseBranchName = branchName.toLowerCase();
+                String lowerCaseNewValue = newValue.toLowerCase();
+
+                return lowerCaseBranchName.contains(lowerCaseNewValue) ||
+                        Arrays.stream(lowerCaseNewValue.split("\\s+"))
+                                .allMatch(keyword -> lowerCaseBranchName.contains(keyword));
+            });
+
+            branchComboBox.show();
+        });
     }
 
     private void filterEmployeesByBranch() {
         branchComboBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
-                int selectedBranchId = Integer.parseInt(newValue.replace("Branch ", ""));
-                List<Employee> filteredEmployees = employeeRepo.findByBranchIdAndPosition(selectedBranchId);
-                employeeList.setAll(filteredEmployees);
+                Integer selectedBranchId = branchMap.get(newValue); // Retrieve ID from map
+                if (selectedBranchId != null) {
+                    List<Employee> filteredEmployees = employeeRepo.findByBranchIdAndPosition(selectedBranchId);
+                    employeeList.setAll(filteredEmployees);
+                } else {
+                    System.out.println("Branch ID not found for: " + newValue);
+                }
             }
         });
     }
+
 
 
     private void setupTable() {
@@ -148,6 +177,7 @@ public class CalculateController {
             }
         });
 
+        bonusColumn.setCellValueFactory(new PropertyValueFactory<>("bonus"));
 
         // Load Employees
         employeeList = FXCollections.observableArrayList(employeeRepo.getAllEmployees());
@@ -186,18 +216,12 @@ public class CalculateController {
                     double bonus = "Cashier".equals(employee.getPosition()) ? bonusPerEmployee * 2 : bonusPerEmployee;
                     double roundedBonus = Math.floor(bonus / 50) * 50; // Round down to nearest multiple of 50
 
+                    employee.setBonus(roundedBonus);
                     // Create a Salary object and store it
-                    Salary salaryRecord = new Salary();
-                    salaryRecord.setUserId(employee.getId());
-                    salaryRecord.setBranchId(employee.getBranchId());
-                    salaryRecord.setSalaryDate(LocalDate.now());
-                    salaryRecord.setBonus(roundedBonus);
 
-                    // Save to database (implement saveSalary method)
-                    saveSalary(salaryRecord);
                 }
             }
-
+            employeeTableView.refresh();
             showAlert("Success", "Bonus calculated and stored successfully!");
 
         } catch (NumberFormatException e) {
@@ -206,6 +230,7 @@ public class CalculateController {
     }
 
     private void saveSalary(Salary salaryRecord) {
+
     }
 
 

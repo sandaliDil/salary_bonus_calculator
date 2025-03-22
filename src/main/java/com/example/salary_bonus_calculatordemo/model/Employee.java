@@ -2,7 +2,9 @@ package com.example.salary_bonus_calculatordemo.model;
 
 
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 
 public class Employee {
     private int id;
@@ -10,8 +12,22 @@ public class Employee {
     private String position;
     private int branchId; // Added branchId field
     private BooleanProperty attendance;
+    private DoubleProperty bonus = new SimpleDoubleProperty();
 
-    
+    public double getBonus() {
+        return bonus.get();
+    }
+
+    public void setBonus(double bonus) {
+        this.bonus.set(bonus);
+    }
+
+    public DoubleProperty bonusProperty() {
+        return bonus;
+    }
+
+
+
 
     public Employee(int id, String userName, String position, int branchId, boolean attendance) {
         this.id = id;

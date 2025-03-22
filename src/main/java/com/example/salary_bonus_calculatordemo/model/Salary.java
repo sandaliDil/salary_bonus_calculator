@@ -1,5 +1,7 @@
 package com.example.salary_bonus_calculatordemo.model;
 
+import javafx.beans.binding.BooleanExpression;
+
 import java.time.LocalDate;
 
 public class Salary {
@@ -75,6 +77,7 @@ public class Salary {
                     ", bonus=" + bonus +
                     '}';
         }
+
 
 
 }
